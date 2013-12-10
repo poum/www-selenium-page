@@ -1,0 +1,106 @@
+# NAME
+
+Test::WWW::Selenium::Page - Page Object for Test::WWW::Selenium
+
+# VERSION
+
+version 0.001001
+
+# SYNOPSIS
+
+    use Test::WWW::Selenium::Page;
+    
+
+    my $page = new Test::WWW::Selenium::Page()
+
+    say $page->title();
+
+# METHODS
+
+## name
+
+Name of aimed page, used for prefixing screenshots
+
+## url
+
+Retourne l'URL de la page sans le protocole, le serveur et le port.
+Par exemple, pour "http://127.0.0.1:3000/aide", on aura: "/aide"
+
+## get\_title
+
+Returns web page title (String)
+
+## capture\_screenshot
+
+Take a page screenshot and generate an png image <page name>\_<time>.png
+
+## menu
+
+Retourne le XPATh du menu indiqué
+
+## aMenu
+
+Attend que le menu indiqué soit présent
+
+## cliquerMenu
+
+Clique sur le menu indiqué en attendant qu'il soit présent
+
+## sousMenu
+
+Clique sur le menu pour faire apparaître le sous-menu
+puis retourne le chemin XPATH du sous-menu indiqué
+
+## aSousMenu
+
+Clique sur le menu puis attend que le sous-menu indiqué soit présent
+
+## cliquerSousMenu
+
+Clique sur le menu pour faire apparaître le sous-menu
+puis clique sur le sous-menu indiqué
+
+## fenetreConnexion
+
+Retourne la fenêtre de connexion (Selenium::Remote::WebElement).
+Retourne undef si elle n'est pas trouvée (pas d'exception) ce qui
+permet de tester sa disparition.
+
+## boiteAlerte
+
+Retourne la boite d'alerte avec le titre fourni
+
+- paramètres
+    - titre de la boîte d'alerte cherchée
+- retourne
+    - la boîte d'alerte (Selenium::Remote::WebElement) ou undef
+
+## saisirIdentifiants
+
+Saisit l'identifiant et le mot passe fournis dans les champs correspondants.
+Ces champs sont effacés au préalable.
+Attend ensuite 1 seconde pour que le formulaire puisse se valider
+et que le bouton "Se connecter" ait le temps de s'activer.
+
+# TODO
+
+- Generalize
+- Suppress ExtJS specific and put in Test::WWW::Selenium::Page::ExtJS
+- Suppress Menu stuff
+- Rename methods with appropriate english names
+
+# SEE ALSO
+
+- Test::WWW::Selenium of course
+- Test::WWW:Selenium::Page::ExtJS (coming soon)
+
+# AUTHOR
+
+Philippe Poumaroux  <poum@cpan.org>
+
+# COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by Philippe Poumaroux.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
