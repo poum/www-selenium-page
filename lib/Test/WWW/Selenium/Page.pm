@@ -1,9 +1,9 @@
 package Test::WWW::Selenium::Page;
 
-#ABSTRACT: Page Object for Test::WWW::Selenium
+#ABSTRACT: Page Object for testing with Test::WWW::Selenium
 
-use Moose;
 use Carp;
+use Moose;
 use namespace::autoclean;
 use Test::WWW::Selenium;
 use MIME::Base64;
@@ -11,413 +11,483 @@ use Encode;
 
 =encoding utf8
 
-=head1 SYNOPSIS
-
-  use Test::WWW::Selenium::Page;
-  
-  my $page = new Test::WWW::Selenium::Page()
-
-  say $page->title();
-
 =cut
 
 =head1 METHODS
 
-=head2 name
+=head2 relative location
 
-Name of aimed page, used for prefixing screenshots
+The page location without protocol, host and port part.
 
 =cut
-has 'name' => (
-    is => 'ro',
-    isa => 'Str'
+has 'relative_location' => (
+    is  => 'ro',
+    isa => 'Str',
+    default => '/',
+);
+
+=head2 title 
+
+Expected title of aimed HTML page
+
+=cut
+has 'title' => (
+    is  => 'ro',
+    isa => 'Str',
+);
+
+=head2 restricted
+
+Flag for restricted access page needing an logged in user.
+If set, log_in_user, log_out_user and has_logged_in_user have to be
+overloaded.
+
+If undefined, page is usable both for anonymous or logged in user
+
+Set to undef by default.
+=cut
+has 'restricted' => (
+    is  => 'ro',
+    isa => 'Bool',
+);
+
+=head2 default_user_id
+
+Default user id to log in if page is restricted
+
+=cut
+has 'default_user_id' => (
+    is  => 'rw',
+    isa => 'Str',
+);
+
+=head2 default_user_password
+
+Default user password for log in if page is restricted
+
+=cut
+has 'default_user_password' => (
+    is  => 'rw',
+    isa => 'Str',
 );
 
 has 'driver' => (
-  is => 'rw',
-  isa => 'Test::WWW::Selenium'
+  is  => 'rw',
+  isa => 'Test::WWW::Selenium',
 );
 
-has 'host' => (
-  is => 'rw',
-  isa => 'Str', 
-  default => '127.0.0.1'
+=head2 driver_host
+
+Selenium host (127.0.0.1 by default)
+
+=cut
+has 'driver_host' => (
+  is      => 'rw',
+  isa     => 'Str', 
+  default => '127.0.0.1',
 );
 
-has 'port' => (
-  is => 'rw',
-  isa => 'Int',
-  default => 4444
+=head2 driver_port
+
+Selenium port (4444 by default)
+
+=cut
+has 'driver_port' => (
+  is      => 'rw',
+  isa     => 'Int',
+  default => 4444,
 );
 
-has 'browser' => (
-  is => 'rw',
-  isa => 'Str',
-  default => '*firefox /home/poum/bin/firefox-12/firefox',
+=head2 driver_browser
+
+Selenium browser (*firefox by default).
+See L<WWW::Selenium> for details
+
+=cut
+has 'driver_browser' => (
+  is      => 'rw',
+  isa     => 'Str',
+  default => '*firefox',
 );
 
-has 'browser_url' => (
-  is => 'rw',
-  isa => 'Str',
-  default => 'http://154.1.2.205:3000'
+=head2 driver_browser_url
+
+Absolute starting URL for browser
+
+=cut
+has 'driver_browser_url' => (
+  is      => 'rw',
+  isa     => 'Str',
+  default => 'http://127.0.0.1',
 );
 
+=head2 speed
+
+Execution speed
+
+=cut
 has 'speed' => (
-  is => 'rw',
-  isa => 'Int',
-  default => 500
+  is      => 'rw',
+  isa     => 'Int',
+  default => 500,
 );
 
 sub BUILD {
-  my $self = shift;
-  $self->driver( 
-    Test::WWW::Selenium->new(
-      host        => $self->host, 
-      port        => $self->port,
-      browser     => $self->browser,
-      browser_url => $self->browser_url
+    my $self = shift;
+
+    $self->driver( 
+        Test::WWW::Selenium->new(
+            host        => $self->driver_host, 
+            port        => $self->driver_port,
+            browser     => $self->driver_browser,
+            browser_url => $self->driver_browser_url,
+        ) 
     ) 
-  );
+        or croak "Unable to launch Selenium driver: $!";
 
-  croak "Impossible de lancer le driver Selenium: $!" unless $self->driver;
+    $self->driver->start();
+    $self->driver->open($self->relative_location);
+    # set_speed need an opened page 
+    $self->driver->set_speed($self->speed);
 
-  $self->driver->start();
-  $self->driver->open('/');
-  $self->driver->set_speed($self->speed);
-}
+    if  ( defined $self->is_restricted 
+        and $self->is_restricted == 1
+        and not $self->has_logged_in_user() ) {
+            $self->log_in_user() 
+                or croak 'Unable to log in as ' . $self->default_user_id;
+    }
 
-=head2 url
+    if ( not $self->has_expected_relative_location() ) {
+      my ($expected, $got) = ($self->relative_location, $self->get_relative_location() );
 
-Retourne l'URL de la page sans le protocole, le serveur et le port.
-Par exemple, pour "http://127.0.0.1:3000/aide", on aura: "/aide"
+      croak <<"END_CROAK";
 
-=cut
-sub url {
-  my $self = shift;
-  my $url = $self->driver->get_location;
+Page not correctly created, 
 
-  $url =~ s/^https?:\/\/[^\/]+//;
+Expected location: $expected
+Got:               $got
 
-  return $url;
+END_CROAK
+    }
+
+    if ( not $self->has_expected_title() ) {
+      my ($expected, $got) = ($self->title, $self->get_title() );
+
+      croak <<"END_CROAK";
+
+Page not correctly created, expected title: 
+
+Expected title: $expected
+Got:            $got
+
+END_CROAK
+    }
 }
 
 =head2 get_title
 
-Returns web page title (String)
+Return the HTML page title
 
 =cut
 sub get_title {
+    my $self = shift;
+    return $self->driver->get_title();
+}
+
+=head2 get_location
+
+Return page location
+
+=cut
+sub get_location {
+    my $self = shift;
+    
+    return $self->driver->get_location;
+}
+
+=head2 get_relative_location
+
+Return site relative location (without protocol, host and port part)
+
+By example, '/home' for 'http://127.0.0.1:3000/home'
+
+=cut
+sub get_relative_location {
   my $self = shift;
-  return $self->driver->get_title();
+
+  my $relative_location = $self->get_location;
+
+  $relative_location =~ s/^https?:\/\/[^\/]+//;
+
+  return $relative_location;
+}
+
+=head2 refresh
+
+Refresh page (chainable)
+
+=cut
+
+sub refresh {
+    my $self = shift;
+    
+    $self->driver->refresh();
+
+    return $self;
 }
 
 =head2 capture_screenshot
 
-Take a page screenshot and generate an png image <page name>_<time>.png
+Capture page screenshot (chainable)
+
+The resulting image file would be <page_title>_<time>.png
 
 =cut
 sub capture_screenshot {
   my $self = shift;
-  $self->driver->capture_screenshot($self->name . '_' . time . '.png');
+  $self->driver->capture_screenshot($self->get_title . '_' . time . '.png');
+
+    return $self;
 }
 
-=head2 menu
+=head2 log_in_user
 
-Retourne le XPATh du menu indiqué
+Log in user with supplied id and password (chainable).
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=over 4
+
+=item Parameters
+
+=over 4
+
+=item user id
+
+=item user password
+
+=back
+
+=item Return page reference in case of success, undef oterwhise
+
+=back
 
 =cut
-sub menu {
-  my ($self, $menu) = @_;
-  croak "Nom du menu attendu" unless $menu;
+sub log_in_user {
+    my $self = shift;
+    my $user_id = shift || $self->default_user_id 
+        or croak "User id is missing";
+    my $password = shift || $self->default_user_password
+        or croak "User password is missing";
 
-  return q#//div[@id='menus']//button/span# . contientTexte($menu);
+    if ( $self->is_restricted() ) {
+        croak << 'END_CROAK';
+
+authenticate_user method has to be be overloaded in inherited Page class
+because this page has restricted access.
+
+Copy/paste/modify following code in your inherited Page class:
+
+sub log_in_user {
+    my $self = shift;
+    my $user_id = shift || $self->default_user_id 
+        or croak 'User id is missing';
+    my $password = shift || $self->default_user_password
+        or croak 'User password is missing';
+    
+    # your authentication code here
+
+    return $self->has_logged_in_user($user_id) ? $self : undef;
 }
+END_CROAK
 
-=head2 aMenu
-
-Attend que le menu indiqué soit présent
-
-=cut
-sub aMenu {
-  my ($self, $menu) = @_;
-  $menu = $self->menu($menu);
-
-  $self->driver->wait_for_element_present($menu);
-}
-
-=head2 cliquerMenu
-
-Clique sur le menu indiqué en attendant qu'il soit présent
-
-=cut
-sub cliquerMenu {
-  my ($self, $menu) = @_;
-  
-  if ($self->aMenu($menu)) {
-    $self->driver->click($self->menu($menu));
-  }
-}
-
-=head2 sousMenu
-
-Clique sur le menu pour faire apparaître le sous-menu
-puis retourne le chemin XPATH du sous-menu indiqué
-
-=cut
-sub sousMenu {
-  my ($self, $menu, $sousMenu) = @_;
-  my @resteNonGere = ();
-
-  croak "Nom du menu attendu" unless $menu;
-
-  ($menu, $sousMenu, @resteNonGere) = split /\//, $menu if $menu =~ /\// and not $sousMenu;
-  croak "Nom du sous-menu attendu" unless $sousMenu;
-  croak "Gestion limité à un sous-niveau pour le moment" if @resteNonGere;
-
-  $self->cliquerMenu($menu) or croak "Menu non trouvé";
-  
-  return '//a' . aClasse('x-menu-item-link') . '/span' . contientTexte($sousMenu);
-}
-
-=head2 aSousMenu
-
-Clique sur le menu puis attend que le sous-menu indiqué soit présent
-
-=cut
-sub aSousMenu {
-  my ($self, $sousMenu) = @_;
-  $sousMenu = $self->sousMenu($sousMenu);
-
-  $self->driver->wait_for_element_present($sousMenu);
-}
-
-=head2 cliquerSousMenu
-
-Clique sur le menu pour faire apparaître le sous-menu
-puis clique sur le sous-menu indiqué
-
-=cut
-sub cliquerSousMenu {
-  my ($self, $sousMenu) = @_;
-  $sousMenu = $self->sousMenu($sousMenu);
-
-  $self->driver->click($sousMenu);
-}
-
-=head2 fenetreConnexion
-
-Retourne la fenêtre de connexion (Selenium::Remote::WebElement).
-Retourne undef si elle n'est pas trouvée (pas d'exception) ce qui
-permet de tester sa disparition.
-
-=cut
-sub fenetreConnexion {
-  my $self = shift;
-
-  return q#//div[starts-with(@id,'ConnexionWindow')]# . aClasse('x-window'); 
-}
-
-sub aFenetreConnexion {
-  my $self = shift;
-
-  $self->driver->wait_for_element_present($self->fenetreConnexion);
-};
-
-sub aDisparuFenetreConnexion {
-  my $self = shift;
-
-  my $id;
-  eval {
-    $self->driver->is_element_present($self->fenetreConnexion);
-  };
-
-  unless ($@) {
-    eval {
-      $id = $self->driver->get_attribute($self->fenetreConnexion . '@id');
-    };
-
-    if ($id) {
-      $self->driver->wait_for_condition("document.getElementById($id) === null", $self->speed);
+    }
+    else {
+        carp 'Page isn\'t restricted ...'; 
     }
 
-  };
-
-  return 1;
-
+    # return undef if user couldn't log in
+    # Here, page is not restricted, so we consider user can't be logged
+    # in (but page could display differently before / after log in
+    # in some situation).
+    return $self->has_logged_in_user($user_id) ? $self : undef;
 }
 
-=head2 boiteAlerte
+=head2 log_out
 
-Retourne la boite d'alerte avec le titre fourni
+Log out user (chainable)
 
-=over 4
-
-=item paramètres
-
-=over 4
-
-=item titre de la boîte d'alerte cherchée
-
-=back
-
-=item retourne
-
-=over 4
-
-=item la boîte d'alerte (Selenium::Remote::WebElement) ou undef
-
-=back
-
-=back
+Return Page ref is user succeded to log out, undef otherwise.
 
 =cut
-sub boiteAlerte {
-  my $self = shift;
-  my $titre = shift;
+sub log_out {
+    my $self = shift;
 
-  return 
-    '//div' . aClasse('x-message-box') .
-    '//span' . aClasse('x-window-header-text') . contientTexte($titre);
+    if ( $self->is_restricted() ) {
+
+        croak << 'END_CROAK';
+
+log_out method has to be be overloaded in inherited Page class
+because this page has restricted access.
+
+Copy/paste/modify following code in your inherited Page class:
+
+sub log_out {
+    my $self = shift;
+
+    # your log_out code here
+
+    return not $self->has_logged_in_user() ? $self : undef;
 }
+END_CROAK
 
-sub aBoiteAlerte {
-  my $self = shift;
-  my $titre = shift;
+    }
+    else {
+        carp 'Page isn\'t restricted, useless logout operation ...';
+    }
 
-  $self->driver->wait_for_element_present($self->boiteAlerte($titre));
+    return not $self->has_logged_in_user() ? $self : undef;
 }
-
-sub messageBoiteAlerte {
-  my $self = shift;
-  my $message = shift;
-
-  return 
-    '//div' . aClasse('x-message-box') . 
-    '//div' . aClasse('x-form-display-field') . contientTexte($message);
-}
-
-sub aMessageBoiteAlerte {
-  my $self = shift;
-  my $message = shift;
-  
-  $self->driver->wait_for_element_present($self->messageBoiteAlerte($message));
-}
-
-sub champ {
-  my $self = shift;
-  my $label = shift or croak "Label du champ obligatoire";
-  return '//label' . contientTexte($label .':');
-}
-
-sub aChamp {
-  my $self = shift;
-  my $champ = shift;
-  
-  $self->driver->wait_for_element_present($self->champ($champ));
-}
-
-=head2 saisirIdentifiants
-
-Saisit l'identifiant et le mot passe fournis dans les champs correspondants.
-Ces champs sont effacés au préalable.
-Attend ensuite 1 seconde pour que le formulaire puisse se valider
-et que le bouton "Se connecter" ait le temps de s'activer.
-
-=cut
-sub saisirIdentifiants {
-  my ($self, $identifiant, $mot_de_passe) = @_;
-
-  $self->driver->type("//input[\@name='identifiant']", $identifiant);
-  $self->driver->type("//input[\@name='mot_de_passe']", $mot_de_passe);
-
-  #$self->driver->pause(1); # temps validation formulaire
-}
-
-sub bouton {
-  my $self = shift;
-  my $bouton = shift or croak "Nom du bouton attendu";
-
-  return '//button/span' . contientTexte($bouton);
-}
-
-sub aBouton {
-  my $self = shift;
-  my $bouton = shift or croak "Nom du bouton attendu";
-
-  $bouton = $self->bouton($bouton);
-
-  $self->driver->wait_for_element_present($bouton);
-}
-
-sub cliquerBouton {
-  my $self = shift;
-  my $bouton = shift or croak "Nom du bouton attendu";
-
-  $self->driver->click($self->bouton($bouton));
-}
-
-sub boutonDesactive {
-  my $self = shift;
-  my $bouton = shift or croak "Nom du bouton attendu";
-
-  return '//button/span' . contientTexte($bouton) . '/../../..' . aClasse('x-btn-disabled');
-}
-
-sub aBoutonDesactive {
-  my $self = shift;
-
-  $self->driver->wait_for_element_present($self->boutonDesactive);
-}
-
-sub iconeFermeture {
-  my $self = shift;
-  return q#//img[@class='x-tool-close']#;
-}
-
-sub aIconeFermeture {
-  my $self = shift;
-  
-  $self->driver->wait_for_element_present($self->iconeFermeture);
-}
-
-sub cliquerIconeFermeture {
-  my $self = shift;
  
-  $self->driver->click($self->iconeFermeture);  
+=head2 has_expected_title
+
+Check if the HTML page title match the page name attribut value
+
+=cut
+sub has_expected_title {
+    my $self = shift;
+
+    return ( $self->title eq $self->get_title() );
 }
 
-sub texteMenu {
+=head2 has_expected_relative_location
+
+Check if the HTML page relative location match the page relative location
+attribute value
+
+=cut
+sub has_expected_relative_location {
+    my $self = shift;
+
+    return ( $self->relative_location eq $self->get_relative_location() );
+}
+
+=head2 is_restricted
+
+Check if page has restricted access :
+
+=over 4
+
+=item 0: means public access only
+
+=item undef: means both public and logged in user access
+
+=item 1: means restricted access only
+
+=back
+
+=cut
+sub is_restricted {
+    my $self = shift;
+
+    return $self->restricted;
+}
+
+=head2 has_logged_in_user
+
+Check if the specified / an user is logged in
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=cut
+sub has_logged_in_user {
+    my $self = shift;
+    my $user_id = shift || $self->default_user_id 
+        or croak "User id is missing";
+
+    if ( $self->is_restricted() ) {
+        croak << 'END_CROAK';
+
+has_logged_in_user method has to be be overloaded in inherited Page class
+because this page has restricted access.
+
+Copy/paste/modify following code in your inherited Page class:
+
+sub has_logged_in_user {
+    my $self = shift;
+    my $user_id = shift || $self->default_user_id 
+        or croak 'User id is missing';
+
+    # your test code here
+
+    # return appropriate boolean value
+}
+END_CROAK
+
+    }
+    else {
+        carp 'Page isn\'t restricted, will always return false ...';
+    }
+
+    return undef;
+}
+
+=head2 get_XPATH_for_field_width_label
+
+Return XPATH locator for field with specified label
+
+=cut
+sub get_XPATH_for_field_with_label {
   my $self = shift;
-  my $texteMenu = shift;
+  my $label = shift 
+    or croak 'Label required';
 
-  croak "Texte du menu attendu" unless $texteMenu;
-
-  return q#//div[@id='menus']//*# . contientTexte($texteMenu);
+  return '//label' . get_XPATH_for_element_containing_text($label .':');
 }
 
-sub aTexteMenu {
+=head2 wait_for_field_with_label
+
+Wait for field with specified label is present
+
+=cut
+sub get_field_with_label {
   my $self = shift;
-  my $texte = shift;
-
-  $self->driver->wait_for_element_present($self->texteMenu($texte));
+  my $label = shift;
+  
+  $self->driver->wait_for_element_present( $self->get_XPATH_for_field_width_label($label) );
 }
 
-sub contientTexte {
-  my $texte = shift;
+=head2 get_XPATH_for_element_containing_text 
 
-  my @chaines = split /é|è|'/, $texte;
-  my $reponse = '';
+Return XPATH locator for elements containing
+the specified text.
+Split for é, è and ' char
 
-  if (scalar @chaines == 1) {
-    $reponse = sprintf(q#[.='%s']#, $texte);
+=cut
+sub get_XPATH_for_element_containing_text {
+  my $text = shift;
+
+  warn 'TODO: improve encoding processing';
+
+  my @strings = split /é|è|'/, $text;
+  my $XPATH = '';
+
+  if (scalar @strings == 1) {
+    $XPATH = sprintf(q#[.='%s']#, $text);
   }
   else {
-    $reponse .= sprintf(q#[contains(text(), '%s')]#, $_) foreach @chaines;
+    $XPATH .= sprintf(q#[contains(text(), '%s')]#, $_) foreach @strings;
   }
-  return $reponse;
+  return $XPATH;
 }
 
-sub aClasse {
+=head2 get_XPATH_for_element_with_class
+
+Return XPATH locator for elements having
+the specified class.
+
+=cut
+sub get_XPATH_for_element_with_class {
   return sprintf(q#[contains(concat(' ', @class, ' '), '%s')]#, shift);
 }
 
@@ -427,28 +497,18 @@ __PACKAGE__->meta->make_immutable;
 
 __END__
 
-=head1 TODO
+=head1 TEST
+
+Before launching test, you have to:
 
 =over 4
 
-=item Generalize
+=item download selenium server on L<http://docs.seleniumhq.org/download/>
 
-=item Suppress ExtJS specific and put in Test::WWW::Selenium::Page::ExtJS
+=item launch it:
 
-=item Suppress Menu stuff
-
-=item Rename methods with appropriate english names
+    $ java -jar selenium-server-standalone-2.xx.jar
 
 =back
 
-=head1 SEE ALSO
 
-=over 4
-
-=item Test::WWW::Selenium of course
-
-=item Test::WWW:Selenium::Page::ExtJS (coming soon)
-
-=back
-
-=cut

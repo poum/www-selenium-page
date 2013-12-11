@@ -1,98 +1,151 @@
 # NAME
 
-Test::WWW::Selenium::Page - Page Object for Test::WWW::Selenium
+Test::WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
 
 # VERSION
 
 version 0.001001
 
-# SYNOPSIS
-
-    use Test::WWW::Selenium::Page;
-    
-
-    my $page = new Test::WWW::Selenium::Page()
-
-    say $page->title();
-
 # METHODS
 
-## name
+## relative location
 
-Name of aimed page, used for prefixing screenshots
+The page location without protocol, host and port part.
 
-## url
+## title 
 
-Retourne l'URL de la page sans le protocole, le serveur et le port.
-Par exemple, pour "http://127.0.0.1:3000/aide", on aura: "/aide"
+Expected title of aimed HTML page
+
+## restricted
+
+Flag for restricted access page needing an logged in user.
+If set, log\_in\_user, log\_out\_user and has\_logged\_in\_user have to be
+overloaded.
+
+If undefined, page is usable both for anonymous or logged in user
+
+Set to undef by default.
+
+## default\_user\_id
+
+Default user id to log in if page is restricted
+
+## default\_user\_password
+
+Default user password for log in if page is restricted
+
+## driver\_host
+
+Selenium host (127.0.0.1 by default)
+
+## driver\_port
+
+Selenium port (4444 by default)
+
+## driver\_browser
+
+Selenium browser (\*firefox by default).
+See [WWW::Selenium](http://search.cpan.org/perldoc?WWW::Selenium) for details
+
+## driver\_browser\_url
+
+Absolute starting URL for browser
+
+## speed
+
+Execution speed
 
 ## get\_title
 
-Returns web page title (String)
+Return the HTML page title
+
+## get\_location
+
+Return page location
+
+## get\_relative\_location
+
+Return site relative location (without protocol, host and port part)
+
+By example, '/home' for 'http://127.0.0.1:3000/home'
+
+## refresh
+
+Refresh page (chainable)
 
 ## capture\_screenshot
 
-Take a page screenshot and generate an png image <page name>\_<time>.png
+Capture page screenshot (chainable)
 
-## menu
+The resulting image file would be <page\_title>\_<time>.png
 
-Retourne le XPATh du menu indiqué
+## log\_in\_user
 
-## aMenu
+Log in user with supplied id and password (chainable).
 
-Attend que le menu indiqué soit présent
+__This method has to be overloaded in inherited restricted page object__
 
-## cliquerMenu
+- Parameters
+    - user id
+    - user password
+- Return page reference in case of success, undef oterwhise
 
-Clique sur le menu indiqué en attendant qu'il soit présent
+## log\_out
 
-## sousMenu
+Log out user (chainable)
 
-Clique sur le menu pour faire apparaître le sous-menu
-puis retourne le chemin XPATH du sous-menu indiqué
+Return Page ref is user succeded to log out, undef otherwise.
 
-## aSousMenu
+## has\_expected\_title
 
-Clique sur le menu puis attend que le sous-menu indiqué soit présent
+Check if the HTML page title match the page name attribut value
 
-## cliquerSousMenu
+## has\_expected\_relative\_location
 
-Clique sur le menu pour faire apparaître le sous-menu
-puis clique sur le sous-menu indiqué
+Check if the HTML page relative location match the page relative location
+attribute value
 
-## fenetreConnexion
+## is\_restricted
 
-Retourne la fenêtre de connexion (Selenium::Remote::WebElement).
-Retourne undef si elle n'est pas trouvée (pas d'exception) ce qui
-permet de tester sa disparition.
+Check if page has restricted access :
 
-## boiteAlerte
+- 0: means public access only
+- undef: means both public and logged in user access
+- 1: means restricted access only
 
-Retourne la boite d'alerte avec le titre fourni
+## has\_logged\_in\_user
 
-- paramètres
-    - titre de la boîte d'alerte cherchée
-- retourne
-    - la boîte d'alerte (Selenium::Remote::WebElement) ou undef
+Check if the specified / an user is logged in
 
-## saisirIdentifiants
+__This method has to be overloaded in inherited restricted page object__
 
-Saisit l'identifiant et le mot passe fournis dans les champs correspondants.
-Ces champs sont effacés au préalable.
-Attend ensuite 1 seconde pour que le formulaire puisse se valider
-et que le bouton "Se connecter" ait le temps de s'activer.
+## get\_XPATH\_for\_field\_width\_label
 
-# TODO
+Return XPATH locator for field with specified label
 
-- Generalize
-- Suppress ExtJS specific and put in Test::WWW::Selenium::Page::ExtJS
-- Suppress Menu stuff
-- Rename methods with appropriate english names
+## wait\_for\_field\_with\_label
 
-# SEE ALSO
+Wait for field with specified label is present
 
-- Test::WWW::Selenium of course
-- Test::WWW:Selenium::Page::ExtJS (coming soon)
+## get\_XPATH\_for\_element\_containing\_text 
+
+Return XPATH locator for elements containing
+the specified text.
+Split for é, è and ' char
+
+## get\_XPATH\_for\_element\_with\_class
+
+Return XPATH locator for elements having
+the specified class.
+
+# TEST
+
+Before launching test, you have to:
+
+- download selenium server on [http://docs.seleniumhq.org/download/](http://docs.seleniumhq.org/download/)
+- launch it:
+
+        $ java -jar selenium-server-standalone-2.xx.jar
 
 # AUTHOR
 
