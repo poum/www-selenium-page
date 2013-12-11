@@ -240,7 +240,7 @@ sub refresh {
 
 Capture page screenshot (chainable)
 
-The resulting image file would be <page_title>_<time>.png
+The resulting image file would be "page_title"_"time".png
 
 =cut
 sub capture_screenshot {
@@ -318,6 +318,8 @@ END_CROAK
 Log out user (chainable)
 
 Return Page ref is user succeded to log out, undef otherwise.
+
+B<This method has to be overloaded in inherited restricted page object>
 
 =cut
 sub log_out {
