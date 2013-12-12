@@ -1,4 +1,7 @@
-package Test::WWW::Selenium::Page;
+package WWW::Selenium::Page;
+{
+  $WWW::Selenium::Page::VERSION = '0.001001';
+}
 
 #ABSTRACT: Page Object for testing with Test::WWW::Selenium
 
@@ -9,63 +12,28 @@ use Test::WWW::Selenium;
 use MIME::Base64;
 use Encode;
 
-=encoding utf8
 
-=cut
-
-=head1 METHODS
-
-=head2 relative location
-
-The page location without protocol, host and port part.
-
-=cut
 has 'relative_location' => (
     is  => 'ro',
     isa => 'Str',
     default => '/',
 );
 
-=head2 title 
-
-Expected title of aimed HTML page
-
-=cut
 has 'title' => (
     is  => 'ro',
     isa => 'Str',
 );
 
-=head2 restricted
-
-Flag for restricted access page needing an logged in user.
-If set, log_in_user, log_out_user and has_logged_in_user have to be
-overloaded.
-
-If undefined, page is usable both for anonymous or logged in user
-
-Set to undef by default.
-=cut
 has 'restricted' => (
     is  => 'ro',
     isa => 'Bool',
 );
 
-=head2 default_user_id
-
-Default user id to log in if page is restricted
-
-=cut
 has 'default_user_id' => (
     is  => 'rw',
     isa => 'Str',
 );
 
-=head2 default_user_password
-
-Default user password for log in if page is restricted
-
-=cut
 has 'default_user_password' => (
     is  => 'rw',
     isa => 'Str',
@@ -73,59 +41,33 @@ has 'default_user_password' => (
 
 has 'driver' => (
   is  => 'rw',
-  isa => 'Test::WWW::Selenium',
+  isa => 'WWW::Selenium',
 );
 
-=head2 driver_host
-
-Selenium host (127.0.0.1 by default)
-
-=cut
 has 'driver_host' => (
   is      => 'rw',
   isa     => 'Str', 
   default => '127.0.0.1',
 );
 
-=head2 driver_port
-
-Selenium port (4444 by default)
-
-=cut
 has 'driver_port' => (
   is      => 'rw',
   isa     => 'Int',
   default => 4444,
 );
 
-=head2 driver_browser
-
-Selenium browser (*firefox by default).
-See L<WWW::Selenium> for details
-
-=cut
 has 'driver_browser' => (
   is      => 'rw',
   isa     => 'Str',
   default => '*firefox',
 );
 
-=head2 driver_browser_url
-
-Absolute starting URL for browser
-
-=cut
 has 'driver_browser_url' => (
   is      => 'rw',
   isa     => 'Str',
   default => 'http://127.0.0.1',
 );
 
-=head2 speed
-
-Execution speed
-
-=cut
 has 'speed' => (
   is      => 'rw',
   isa     => 'Int',
@@ -136,7 +78,7 @@ sub BUILD {
     my $self = shift;
 
     $self->driver( 
-        Test::WWW::Selenium->new(
+        WWW::Selenium->new(
             host        => $self->driver_host, 
             port        => $self->driver_port,
             browser     => $self->driver_browser,
@@ -184,34 +126,17 @@ END_CROAK
     }
 }
 
-=head2 get_title
-
-Return the HTML page title
-
-=cut
 sub get_title {
     my $self = shift;
     return $self->driver->get_title();
 }
 
-=head2 get_location
-
-Return page location
-
-=cut
 sub get_location {
     my $self = shift;
     
     return $self->driver->get_location;
 }
 
-=head2 get_relative_location
-
-Return site relative location (without protocol, host and port part)
-
-By example, '/home' for 'http://127.0.0.1:3000/home'
-
-=cut
 sub get_relative_location {
   my $self = shift;
 
@@ -222,11 +147,6 @@ sub get_relative_location {
   return $relative_location;
 }
 
-=head2 refresh
-
-Refresh page (chainable)
-
-=cut
 
 sub refresh {
     my $self = shift;
@@ -236,13 +156,6 @@ sub refresh {
     return $self;
 }
 
-=head2 capture_screenshot
-
-Capture page screenshot (chainable)
-
-The resulting image file would be "page_title"_"time".png
-
-=cut
 sub capture_screenshot {
   my $self = shift;
   $self->driver->capture_screenshot($self->get_title . '_' . time . '.png');
@@ -250,29 +163,6 @@ sub capture_screenshot {
     return $self;
 }
 
-=head2 log_in_user
-
-Log in user with supplied id and password (chainable).
-
-B<This method has to be overloaded in inherited restricted page object>
-
-=over 4
-
-=item Parameters
-
-=over 4
-
-=item user id
-
-=item user password
-
-=back
-
-=item Return page reference in case of success, undef oterwhise
-
-=back
-
-=cut
 sub log_in_user {
     my $self = shift;
     my $user_id = shift || $self->default_user_id 
@@ -313,15 +203,6 @@ END_CROAK
     return $self->has_logged_in_user($user_id) ? $self : undef;
 }
 
-=head2 log_out
-
-Log out user (chainable)
-
-Return Page ref is user succeded to log out, undef otherwise.
-
-B<This method has to be overloaded in inherited restricted page object>
-
-=cut
 sub log_out {
     my $self = shift;
 
@@ -351,57 +232,24 @@ END_CROAK
     return not $self->has_logged_in_user() ? $self : undef;
 }
  
-=head2 has_expected_title
-
-Check if the HTML page title match the page name attribut value
-
-=cut
 sub has_expected_title {
     my $self = shift;
 
     return ( $self->title eq $self->get_title() );
 }
 
-=head2 has_expected_relative_location
-
-Check if the HTML page relative location match the page relative location
-attribute value
-
-=cut
 sub has_expected_relative_location {
     my $self = shift;
 
     return ( $self->relative_location eq $self->get_relative_location() );
 }
 
-=head2 is_restricted
-
-Check if page has restricted access :
-
-=over 4
-
-=item 0: means public access only
-
-=item undef: means both public and logged in user access
-
-=item 1: means restricted access only
-
-=back
-
-=cut
 sub is_restricted {
     my $self = shift;
 
     return $self->restricted;
 }
 
-=head2 has_logged_in_user
-
-Check if the specified / an user is logged in
-
-B<This method has to be overloaded in inherited restricted page object>
-
-=cut
 sub has_logged_in_user {
     my $self = shift;
     my $user_id = shift || $self->default_user_id 
@@ -434,11 +282,6 @@ END_CROAK
     return undef;
 }
 
-=head2 get_XPATH_for_field_width_label
-
-Return XPATH locator for field with specified label
-
-=cut
 sub get_XPATH_for_field_with_label {
   my $self = shift;
   my $label = shift 
@@ -447,11 +290,6 @@ sub get_XPATH_for_field_with_label {
   return '//label' . get_XPATH_for_element_containing_text($label .':');
 }
 
-=head2 wait_for_field_with_label
-
-Wait for field with specified label is present
-
-=cut
 sub get_field_with_label {
   my $self = shift;
   my $label = shift;
@@ -459,13 +297,6 @@ sub get_field_with_label {
   $self->driver->wait_for_element_present( $self->get_XPATH_for_field_width_label($label) );
 }
 
-=head2 get_XPATH_for_element_containing_text 
-
-Return XPATH locator for elements containing
-the specified text.
-Split for é, è and ' char
-
-=cut
 sub get_XPATH_for_element_containing_text {
   my $text = shift;
 
@@ -483,12 +314,6 @@ sub get_XPATH_for_element_containing_text {
   return $XPATH;
 }
 
-=head2 get_XPATH_for_element_with_class
-
-Return XPATH locator for elements having
-the specified class.
-
-=cut
 sub get_XPATH_for_element_with_class {
   return sprintf(q#[contains(concat(' ', @class, ' '), '%s')]#, shift);
 }
@@ -498,6 +323,169 @@ __PACKAGE__->meta->make_immutable;
 1;
 
 __END__
+
+=pod
+
+=head1 NAME
+
+Test::WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
+
+=head1 VERSION
+
+version 0.001001
+
+=encoding utf8
+
+=head1 METHODS
+
+=head2 relative location
+
+The page location without protocol, host and port part.
+
+=head2 title 
+
+Expected title of aimed HTML page
+
+=head2 restricted
+
+Flag for restricted access page needing an logged in user.
+If set, log_in_user, log_out_user and has_logged_in_user have to be
+overloaded.
+
+If undefined, page is usable both for anonymous or logged in user
+
+Set to undef by default.
+
+=head2 default_user_id
+
+Default user id to log in if page is restricted
+
+=head2 default_user_password
+
+Default user password for log in if page is restricted
+
+=head2 driver_host
+
+Selenium host (127.0.0.1 by default)
+
+=head2 driver_port
+
+Selenium port (4444 by default)
+
+=head2 driver_browser
+
+Selenium browser (*firefox by default).
+See L<WWW::Selenium> for details
+
+=head2 driver_browser_url
+
+Absolute starting URL for browser
+
+=head2 speed
+
+Execution speed
+
+=head2 get_title
+
+Return the HTML page title
+
+=head2 get_location
+
+Return page location
+
+=head2 get_relative_location
+
+Return site relative location (without protocol, host and port part)
+
+By example, '/home' for 'http://127.0.0.1:3000/home'
+
+=head2 refresh
+
+Refresh page (chainable)
+
+=head2 capture_screenshot
+
+Capture page screenshot (chainable)
+
+The resulting image file would be "page_title"_"time".png
+
+=head2 log_in_user
+
+Log in user with supplied id and password (chainable).
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=over 4
+
+=item Parameters
+
+=over 4
+
+=item user id
+
+=item user password
+
+=back
+
+=item Return page reference in case of success, undef oterwhise
+
+=back
+
+=head2 log_out
+
+Log out user (chainable)
+
+Return Page ref is user succeded to log out, undef otherwise.
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=head2 has_expected_title
+
+Check if the HTML page title match the page name attribut value
+
+=head2 has_expected_relative_location
+
+Check if the HTML page relative location match the page relative location
+attribute value
+
+=head2 is_restricted
+
+Check if page has restricted access :
+
+=over 4
+
+=item 0: means public access only
+
+=item undef: means both public and logged in user access
+
+=item 1: means restricted access only
+
+=back
+
+=head2 has_logged_in_user
+
+Check if the specified / an user is logged in
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=head2 get_XPATH_for_field_width_label
+
+Return XPATH locator for field with specified label
+
+=head2 wait_for_field_with_label
+
+Wait for field with specified label is present
+
+=head2 get_XPATH_for_element_containing_text 
+
+Return XPATH locator for elements containing
+the specified text.
+Split for é, è and ' char
+
+=head2 get_XPATH_for_element_with_class
+
+Return XPATH locator for elements having
+the specified class.
 
 =head1 TEST
 
@@ -513,4 +501,15 @@ Before launching test, you have to:
 
 =back
 
+=head1 AUTHOR
 
+Philippe Poumaroux  <poum@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by Philippe Poumaroux.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut

@@ -3,6 +3,10 @@
 use strict;
 use warnings;
 
+use HTTP::Daemon;
+use HTTP::Status;
+use LWP::Simple;
+
 use Test::More;
 use Test::Exception;
 
@@ -11,15 +15,21 @@ use lib "$Bin/../lib";
 
 my $oldDir = chdir $Bin;
 
-diag('Testing ExtJS::Generator::DBIC::TypeTranslator ...');
+my $SELENIUM_URL   = 'http://127.0.0.1:4444';
+my $WEB_SERVER_URL = 'http://127.0.0.1:8042';
+my $SELENIUM_JAR   = '../../selenium-server-standalone-2.38.0.jar';
 
-require_ok('Test::WWW::Selenium::Page');
+my $selenium_pid   = start_selenium($SELENIUM_URL);
+my $web_server_pid = start_web_server($WEB_SERVER_URL);
+
+require_ok('WWW::Selenium::Page');
 
 my $page;
 
-ok( $page = Test::WWW::Selenium::Page->new(
-                driver_browser_url => 'http://search.cpan.org',
-                title              => 'The CPAN Search Site - search.cpan.org',
+ok( $page = WWW::Selenium::Page->new(
+                driver_browser_url => $WEB_SERVER_URL,
+                relative_location => '/test_page.html',
+                title              => 'My HTML test page',
             ), 
   'Page object loaded correctly'
 );
@@ -37,4 +47,81 @@ can_ok(
 
 done_testing;
 
+kill 9 => $web_server_pid if $web_server_pid;
+kill 9 => $selenium_pid   if $selenium_pid;
+
 chdir $oldDir;
+
+sub start_selenium {
+    my $selenium_url = shift;
+
+    my $response 
+        = get($selenium_url . '/selenium-server/driver/?cmd=getLogMessages');
+
+    my $pid;
+    if (not defined $response) {
+        diag('[INFO] Launching Selenium Server ....');
+
+        if ($pid = open(CHILD, "-|")) {
+            my $line = '';
+            while ($line !~ /Started\s+org.openqa.jetty.jetty.Server/) {
+                $line = <CHILD>;
+                diag('[INFO] Waiting for Selenium Server ... : ' . $line);
+            }
+
+            diag('[INFO] Testing Selenium server connection ...');
+            die unless get($selenium_url .  '/selenium-server/driver/?cmd=getLogMessages');
+            diag('[INFO] Selenium server OK ...');
+
+            return $pid;
+        }
+        else {
+            die "Fork impossible: $!" unless defined $pid;
+            exec('java -jar ' . $SELENIUM_JAR);
+        }
+    }
+    else {
+        diag('[INFO] Selenium server already running');
+    }
+}
+
+sub start_web_server {
+
+    my $web_server_url = shift;
+    my ($protocole, $address, $port) = split ':',$web_server_url;
+    $address =~ s/^\/\///;
+
+    my $response 
+        = get($web_server_url . '/test_page.html');
+
+    if (not $response) {
+        diag('[INFO] Launching Web Server ....');
+        my $pid;
+        if ($pid = fork) {
+            return $pid;
+        }
+        else {
+            die "Fork error: $!" unless defined $pid;
+            my $d = HTTP::Daemon->new(
+                        LocalAddr => $address,
+                        LocalPort => $port,
+                    ) or die 'Unable to start test web server: ' . $!;
+            diag('[INFO] HTTP server ready at ' . $d->url);
+            while (my $c = $d->accept) {
+                while (my $r = $c->get_request) {
+                    if ($r->method eq 'GET' and $r->uri->path eq "/test_page.html") {
+                        $c->send_file_response("$Bin/htdocs/test_page.html");
+                    }
+                    else {
+                        $c->send_error(RC_FORBIDDEN)
+                    }
+                }
+                $c->close;
+                undef($c);
+            }
+        }
+    }
+    else {
+        diag('[INFO] Web server already running');
+    }
+}
