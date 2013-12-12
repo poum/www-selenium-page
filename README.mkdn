@@ -1,5 +1,13 @@
 # NAME
 
+WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
+
+# VERSION
+
+version 0.001001
+
+# NAME
+
 Test::WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
 
 # VERSION
@@ -148,6 +156,17 @@ Before launching test, you have to:
 - launch it:
 
         $ java -jar selenium-server-standalone-2.xx.jar
+
+# AUTHOR
+
+Philippe Poumaroux  <poum@cpan.org>
+
+# COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by Philippe Poumaroux.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 # AUTHOR
 

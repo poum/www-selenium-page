@@ -17,7 +17,9 @@ my $oldDir = chdir $Bin;
 
 my $SELENIUM_URL   = 'http://127.0.0.1:4444';
 my $WEB_SERVER_URL = 'http://127.0.0.1:8042';
-my $SELENIUM_JAR   = '../../selenium-server-standalone-2.38.0.jar';
+my $SELENIUM_JAR   = $Bin . '/selenium-server-standalone-2.38.0.jar';
+
+die $SELENIUM_JAR . ' not found' if not -e $SELENIUM_JAR;
 
 my $selenium_pid   = start_selenium($SELENIUM_URL);
 my $web_server_pid = start_web_server($WEB_SERVER_URL);

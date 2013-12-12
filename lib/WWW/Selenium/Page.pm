@@ -493,13 +493,17 @@ Before launching test, you have to:
 
 =over 4
 
-=item download selenium server on L<http://docs.seleniumhq.org/download/>
+=item download selenium server on L<http://docs.seleniumhq.org/download/> in t folder
 
-=item launch it:
+=item launch test : selenium-server-standalone will be automatically launched if not already running. A simple web server will also be launched.
 
-    $ java -jar selenium-server-standalone-2.xx.jar
+=item when test ends, the web server and selenium-server are stopped
 
 =back
+
+To launch selenium-server once for all, use :
+
+    $ java -jar selenium-server-standalone-2.xx.jar
 
 =head1 AUTHOR
 
