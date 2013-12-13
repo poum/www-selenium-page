@@ -3,7 +3,7 @@ package WWW::Selenium::Page;
   $WWW::Selenium::Page::VERSION = '0.001001';
 }
 
-#ABSTRACT: Page Object for testing with Test::WWW::Selenium
+#ABSTRACT: Page Object for testing with WWW::Selenium
 
 use Carp;
 use Moose;
