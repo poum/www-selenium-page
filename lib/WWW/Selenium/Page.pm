@@ -2,7 +2,7 @@
 package WWW::Selenium::Page;
 ## use critic
 
-#ABSTRACT: Page Object for testing with Test::WWW::Selenium
+#ABSTRACT: Page Object for testing with WWW::Selenium
 
 use Carp;
 use Moose;
