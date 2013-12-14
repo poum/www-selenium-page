@@ -38,14 +38,18 @@ ok( $page = WWW::Selenium::Page->new(
 
 can_ok(
   $page, 
-  (qw/get_title            get_location                           get_relative_location
-      refresh              capture_screenshot                     log_in_user
-      log_in_user          log_out                                log_out
-      has_expected_title   has_expected_relative_location         is_restricted
-      has_logged_in_user   has_logged_in_user                     get_XPATH_for_field_with_label
-      get_field_with_label get_XPATH_for_element_containing_text  get_XPATH_for_element_with_class/
+  (qw/get_title                 get_location                           get_relative_location
+      refresh                   capture_screenshot                     log_in_user
+      log_in_user               log_out                                log_out
+      has_expected_title        has_expected_relative_location         is_restricted
+      has_logged_in_user        has_logged_in_user                     get_XPATH_for_field_with_label
+      wait_for_field_with_label get_XPATH_for_element_containing_text  get_XPATH_for_element_with_class/
   )
 );
+
+is($page->get_title(), 'My HTML test page');
+is($page->get_location, $WEB_SERVER_URL . '/test_page.html');
+is($page->get_relative_location, '/test_page.html');
 
 done_testing;
 
@@ -96,6 +100,7 @@ sub start_web_server {
     my $response 
         = get($web_server_url . '/test_page.html');
 
+    diag($response);
     if (not $response) {
         diag('[INFO] Launching Web Server ....');
         my $pid;

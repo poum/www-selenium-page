@@ -6,14 +6,6 @@ WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
 
 version 0.001001
 
-# NAME
-
-Test::WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
-
-# VERSION
-
-version 0.001001
-
 # METHODS
 
 ## relative location
@@ -42,26 +34,33 @@ Default user id to log in if page is restricted
 
 Default user password for log in if page is restricted
 
+## driver
+
+Selenium remote control client
+
 ## driver\_host
 
-Selenium host (127.0.0.1 by default)
+Host on which the Selenium Server resides (127.0.0.1 by default)
 
 ## driver\_port
 
-Selenium port (4444 by default)
+Port on wich the Selenium Server is listening (4444 by default)
 
 ## driver\_browser
 
-Selenium browser (\*firefox by default).
+Command string used to launch the browser, e.g.  "\*firefox" (default value), "\*iexplore" or "/usr/bin/firefox"
 See [WWW::Selenium](http://search.cpan.org/perldoc?WWW::Selenium) for details
 
 ## driver\_browser\_url
 
-Absolute starting URL for browser
+Starting URL including just a domain name.  We'll start the browser pointing at the Selenium resources on this URL, e.g.
+"http://www.google.com" would send the browser to "http://www.google.com/selenium-server/SeleneseRunner.html".
+http://127.0.0.1 by default.
 
 ## speed
 
-Execution speed
+Set execution speed (i.e., set the millisecond length of a delay which will follow each selenium operation).  
+By default, the delay is 500 milliseconds.
 
 ## get\_title
 
@@ -74,7 +73,6 @@ Return page location
 ## get\_relative\_location
 
 Return site relative location (without protocol, host and port part)
-
 By example, '/home' for 'http://127.0.0.1:3000/home'
 
 ## refresh
@@ -152,21 +150,13 @@ the specified class.
 
 Before launching test, you have to:
 
-- download selenium server on [http://docs.seleniumhq.org/download/](http://docs.seleniumhq.org/download/)
-- launch it:
+- download selenium server on [http://docs.seleniumhq.org/download/](http://docs.seleniumhq.org/download/) in t folder
+- launch test : selenium-server-standalone will be automatically launched if not already running. A simple web server will also be launched.
+- when test ends, the web server and selenium-server are stopped
 
-        $ java -jar selenium-server-standalone-2.xx.jar
+To launch selenium-server once for all, use :
 
-# AUTHOR
-
-Philippe Poumaroux  <poum@cpan.org>
-
-# COPYRIGHT AND LICENSE
-
-This software is copyright (c) 2013 by Philippe Poumaroux.
-
-This is free software; you can redistribute it and/or modify it under
-the same terms as the Perl 5 programming language system itself.
+    $ java -jar selenium-server-standalone-2.xx.jar
 
 # AUTHOR
 

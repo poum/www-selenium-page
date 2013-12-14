@@ -1,73 +1,138 @@
+## no critic (RequireUseStrict)
 package WWW::Selenium::Page;
-{
-  $WWW::Selenium::Page::VERSION = '0.001001';
-}
+## use critic
 
 #ABSTRACT: Page Object for testing with Test::WWW::Selenium
 
 use Carp;
 use Moose;
 use namespace::autoclean;
-use Test::WWW::Selenium;
+use WWW::Selenium;
 use MIME::Base64;
 use Encode;
 
+=head1 METHODS
 
+=head2 relative location
+
+The page location without protocol, host and port part.
+
+=cut
 has 'relative_location' => (
     is  => 'ro',
     isa => 'Str',
     default => '/',
 );
 
+=head2 title 
+
+Expected title of aimed HTML page
+
+=cut
 has 'title' => (
     is  => 'ro',
     isa => 'Str',
 );
 
+=head2 restricted
+
+Flag for restricted access page needing an logged in user.
+If set, log_in_user, log_out_user and has_logged_in_user have to be
+overloaded.
+
+If undefined, page is usable both for anonymous or logged in user
+
+Set to undef by default.
+
+=cut
 has 'restricted' => (
     is  => 'ro',
     isa => 'Bool',
 );
 
+=head2 default_user_id
+
+Default user id to log in if page is restricted
+
+=cut
 has 'default_user_id' => (
     is  => 'rw',
     isa => 'Str',
 );
 
+=head2 default_user_password
+
+Default user password for log in if page is restricted
+
+=cut
 has 'default_user_password' => (
     is  => 'rw',
     isa => 'Str',
 );
 
+=head2 driver
+
+Selenium remote control client
+
+=cut
 has 'driver' => (
   is  => 'rw',
   isa => 'WWW::Selenium',
 );
 
+=head2 driver_host
+
+Host on which the Selenium Server resides (127.0.0.1 by default)
+
+=cut
 has 'driver_host' => (
   is      => 'rw',
   isa     => 'Str', 
   default => '127.0.0.1',
 );
 
+=head2 driver_port
+
+Port on wich the Selenium Server is listening (4444 by default)
+
+=cut
 has 'driver_port' => (
   is      => 'rw',
   isa     => 'Int',
   default => 4444,
 );
 
+=head2 driver_browser
+
+Command string used to launch the browser, e.g.  "*firefox" (default value), "*iexplore" or "/usr/bin/firefox"
+See L<WWW::Selenium> for details
+
+=cut
 has 'driver_browser' => (
   is      => 'rw',
   isa     => 'Str',
   default => '*firefox',
 );
 
+=head2 driver_browser_url
+
+Starting URL including just a domain name.  We'll start the browser pointing at the Selenium resources on this URL, e.g.
+"http://www.google.com" would send the browser to "http://www.google.com/selenium-server/SeleneseRunner.html".
+http://127.0.0.1 by default.
+
+=cut
 has 'driver_browser_url' => (
   is      => 'rw',
   isa     => 'Str',
   default => 'http://127.0.0.1',
 );
 
+=head2 speed
+
+Set execution speed (i.e., set the millisecond length of a delay which will follow each selenium operation).  
+By default, the delay is 500 milliseconds.
+
+=cut
 has 'speed' => (
   is      => 'rw',
   isa     => 'Int',
@@ -126,17 +191,33 @@ END_CROAK
     }
 }
 
+=head2 get_title
+
+Return the HTML page title
+
+=cut
 sub get_title {
     my $self = shift;
     return $self->driver->get_title();
 }
 
+=head2 get_location
+
+Return page location
+
+=cut
 sub get_location {
     my $self = shift;
     
     return $self->driver->get_location;
 }
 
+=head2 get_relative_location
+
+Return site relative location (without protocol, host and port part)
+By example, '/home' for 'http://127.0.0.1:3000/home'
+
+=cut
 sub get_relative_location {
   my $self = shift;
 
@@ -147,7 +228,11 @@ sub get_relative_location {
   return $relative_location;
 }
 
+=head2 refresh
 
+Refresh page (chainable)
+
+=cut
 sub refresh {
     my $self = shift;
     
@@ -156,6 +241,13 @@ sub refresh {
     return $self;
 }
 
+=head2 capture_screenshot
+
+Capture page screenshot (chainable)
+
+The resulting image file would be "page_title"_"time".png
+
+=cut
 sub capture_screenshot {
   my $self = shift;
   $self->driver->capture_screenshot($self->get_title . '_' . time . '.png');
@@ -163,6 +255,29 @@ sub capture_screenshot {
     return $self;
 }
 
+=head2 log_in_user
+
+Log in user with supplied id and password (chainable).
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=over 4
+
+=item Parameters
+
+=over 4
+
+=item user id
+
+=item user password
+
+=back
+
+=item Return page reference in case of success, undef oterwhise
+
+=back
+
+=cut
 sub log_in_user {
     my $self = shift;
     my $user_id = shift || $self->default_user_id 
@@ -187,7 +302,7 @@ sub log_in_user {
     
     # your authentication code here
 
-    return $self->has_logged_in_user($user_id) ? $self : undef;
+    return $self->has_logged_in_user($user_id);
 }
 END_CROAK
 
@@ -200,9 +315,18 @@ END_CROAK
     # Here, page is not restricted, so we consider user can't be logged
     # in (but page could display differently before / after log in
     # in some situation).
-    return $self->has_logged_in_user($user_id) ? $self : undef;
+    return $self->has_logged_in_user($user_id);
 }
 
+=head2 log_out
+
+Log out user (chainable)
+
+Return Page ref is user succeded to log out, undef otherwise.
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=cut
 sub log_out {
     my $self = shift;
 
@@ -220,7 +344,7 @@ sub log_out {
 
     # your log_out code here
 
-    return not $self->has_logged_in_user() ? $self : undef;
+    not $self->has_logged_in_user() ? return $self : return; 
 }
 END_CROAK
 
@@ -229,27 +353,60 @@ END_CROAK
         carp 'Page isn\'t restricted, useless logout operation ...';
     }
 
-    return not $self->has_logged_in_user() ? $self : undef;
+    not $self->has_logged_in_user() ? return $self : return; 
 }
  
+=head2 has_expected_title
+
+Check if the HTML page title match the page name attribut value
+
+=cut
 sub has_expected_title {
     my $self = shift;
 
     return ( $self->title eq $self->get_title() );
 }
 
+=head2 has_expected_relative_location
+
+Check if the HTML page relative location match the page relative location
+attribute value
+
+=cut
 sub has_expected_relative_location {
     my $self = shift;
 
     return ( $self->relative_location eq $self->get_relative_location() );
 }
 
+=head2 is_restricted
+
+Check if page has restricted access :
+
+=over 4
+
+=item 0: means public access only
+
+=item undef: means both public and logged in user access
+
+=item 1: means restricted access only
+
+=back
+
+=cut
 sub is_restricted {
     my $self = shift;
 
     return $self->restricted;
 }
 
+=head2 has_logged_in_user
+
+Check if the specified / an user is logged in
+
+B<This method has to be overloaded in inherited restricted page object>
+
+=cut
 sub has_logged_in_user {
     my $self = shift;
     my $user_id = shift || $self->default_user_id 
@@ -277,11 +434,15 @@ END_CROAK
     }
     else {
         carp 'Page isn\'t restricted, will always return false ...';
+        return;
     }
-
-    return undef;
 }
 
+=head2 get_XPATH_for_field_width_label
+
+Return XPATH locator for field with specified label
+
+=cut
 sub get_XPATH_for_field_with_label {
   my $self = shift;
   my $label = shift 
@@ -290,13 +451,25 @@ sub get_XPATH_for_field_with_label {
   return '//label' . get_XPATH_for_element_containing_text($label .':');
 }
 
-sub get_field_with_label {
+=head2 wait_for_field_with_label
+
+Wait for field with specified label is present
+
+=cut
+sub wait_for_field_with_label {
   my $self = shift;
   my $label = shift;
   
   $self->driver->wait_for_element_present( $self->get_XPATH_for_field_width_label($label) );
 }
 
+=head2 get_XPATH_for_element_containing_text 
+
+Return XPATH locator for elements containing
+the specified text.
+Split for é, è and ' char
+
+=cut
 sub get_XPATH_for_element_containing_text {
   my $text = shift;
 
@@ -314,6 +487,12 @@ sub get_XPATH_for_element_containing_text {
   return $XPATH;
 }
 
+=head2 get_XPATH_for_element_with_class
+
+Return XPATH locator for elements having
+the specified class.
+
+=cut
 sub get_XPATH_for_element_with_class {
   return sprintf(q#[contains(concat(' ', @class, ' '), '%s')]#, shift);
 }
@@ -323,169 +502,6 @@ __PACKAGE__->meta->make_immutable;
 1;
 
 __END__
-
-=pod
-
-=head1 NAME
-
-Test::WWW::Selenium::Page - Page Object for testing with Test::WWW::Selenium
-
-=head1 VERSION
-
-version 0.001001
-
-=encoding utf8
-
-=head1 METHODS
-
-=head2 relative location
-
-The page location without protocol, host and port part.
-
-=head2 title 
-
-Expected title of aimed HTML page
-
-=head2 restricted
-
-Flag for restricted access page needing an logged in user.
-If set, log_in_user, log_out_user and has_logged_in_user have to be
-overloaded.
-
-If undefined, page is usable both for anonymous or logged in user
-
-Set to undef by default.
-
-=head2 default_user_id
-
-Default user id to log in if page is restricted
-
-=head2 default_user_password
-
-Default user password for log in if page is restricted
-
-=head2 driver_host
-
-Selenium host (127.0.0.1 by default)
-
-=head2 driver_port
-
-Selenium port (4444 by default)
-
-=head2 driver_browser
-
-Selenium browser (*firefox by default).
-See L<WWW::Selenium> for details
-
-=head2 driver_browser_url
-
-Absolute starting URL for browser
-
-=head2 speed
-
-Execution speed
-
-=head2 get_title
-
-Return the HTML page title
-
-=head2 get_location
-
-Return page location
-
-=head2 get_relative_location
-
-Return site relative location (without protocol, host and port part)
-
-By example, '/home' for 'http://127.0.0.1:3000/home'
-
-=head2 refresh
-
-Refresh page (chainable)
-
-=head2 capture_screenshot
-
-Capture page screenshot (chainable)
-
-The resulting image file would be "page_title"_"time".png
-
-=head2 log_in_user
-
-Log in user with supplied id and password (chainable).
-
-B<This method has to be overloaded in inherited restricted page object>
-
-=over 4
-
-=item Parameters
-
-=over 4
-
-=item user id
-
-=item user password
-
-=back
-
-=item Return page reference in case of success, undef oterwhise
-
-=back
-
-=head2 log_out
-
-Log out user (chainable)
-
-Return Page ref is user succeded to log out, undef otherwise.
-
-B<This method has to be overloaded in inherited restricted page object>
-
-=head2 has_expected_title
-
-Check if the HTML page title match the page name attribut value
-
-=head2 has_expected_relative_location
-
-Check if the HTML page relative location match the page relative location
-attribute value
-
-=head2 is_restricted
-
-Check if page has restricted access :
-
-=over 4
-
-=item 0: means public access only
-
-=item undef: means both public and logged in user access
-
-=item 1: means restricted access only
-
-=back
-
-=head2 has_logged_in_user
-
-Check if the specified / an user is logged in
-
-B<This method has to be overloaded in inherited restricted page object>
-
-=head2 get_XPATH_for_field_width_label
-
-Return XPATH locator for field with specified label
-
-=head2 wait_for_field_with_label
-
-Wait for field with specified label is present
-
-=head2 get_XPATH_for_element_containing_text 
-
-Return XPATH locator for elements containing
-the specified text.
-Split for é, è and ' char
-
-=head2 get_XPATH_for_element_with_class
-
-Return XPATH locator for elements having
-the specified class.
 
 =head1 TEST
 
@@ -504,16 +520,5 @@ Before launching test, you have to:
 To launch selenium-server once for all, use :
 
     $ java -jar selenium-server-standalone-2.xx.jar
-
-=head1 AUTHOR
-
-Philippe Poumaroux  <poum@cpan.org>
-
-=head1 COPYRIGHT AND LICENSE
-
-This software is copyright (c) 2013 by Philippe Poumaroux.
-
-This is free software; you can redistribute it and/or modify it under
-the same terms as the Perl 5 programming language system itself.
 
 =cut
